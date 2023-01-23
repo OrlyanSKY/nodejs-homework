@@ -1,4 +1,13 @@
 const express = require("express");
+const createError = require("http-errors");
+const Joi = require("joi");
+const contactSchema = Joi.object({
+  name: Joi.string().alphanum().required().min(3).max(15),
+  email: Joi.string()
+    .required()
+    .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } }),
+  phone: Joi.string().required(),
+});
 
 const router = express.Router();
 const {
@@ -10,30 +19,58 @@ const {
 } = require("../../models/contacts");
 
 router.get("/", async (req, res, next) => {
-  const allContacts = await listContacts();
-  res.json({
-    status: "success",
-    code: "400",
-    data: {
-      allContacts,
-    },
-  });
+  try {
+    const allContacts = await listContacts();
+    res.json({
+      status: "success",
+      code: "200",
+      data: {
+        result: allContacts,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/:contactId", async (req, res, next) => {
-  const { contactId } = req.params;
-  const singleContact = await getContactById(contactId);
-  res.json({
-    status: "success",
-    code: "200",
-    data: {
-      singleContact,
-    },
-  });
+  try {
+    const { contactId } = req.params;
+    const result = await getContactById(contactId);
+    if (!result) {
+      throw createError(404, "Not found");
+    }
+    res.json({
+      status: "success",
+      code: "200",
+      data: {
+        result,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post("/", async (req, res, next) => {
-  res.json({ message: "template message" });
+  try {
+    const { error } = contactSchema.validate(req.body);
+    if (error) {
+      error.status = 400;
+      error.message = "missing required name field";
+      throw error;
+    }
+    const result = await addContact(req.body);
+    res.status(201).json({
+      status: "success",
+      code: 201,
+      data: {
+        result,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.delete("/:contactId", async (req, res, next) => {
