@@ -2,7 +2,7 @@ const express = require("express");
 const createError = require("http-errors");
 const Joi = require("joi");
 const contactSchema = Joi.object({
-  name: Joi.string().alphanum().required().min(3).max(15),
+  name: Joi.string().required().min(3).max(30),
   email: Joi.string()
     .required()
     .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } }),
@@ -74,11 +74,49 @@ router.post("/", async (req, res, next) => {
 });
 
 router.delete("/:contactId", async (req, res, next) => {
-  res.json({ message: "template message" });
+  try {
+    const { contactId } = req.params;
+    const result = await removeContact(contactId);
+    if (!result) {
+      throw createError(404, "Not found");
+    }
+    res.json({
+      status: "success",
+      code: 200,
+      data: {
+        result,
+        message: "contact deleted",
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.put("/:contactId", async (req, res, next) => {
-  res.json({ message: "template message" });
+  try {
+    const { error } = contactSchema.validate(req.body);
+    if (error) {
+      error.status = 400;
+      error.message = "missing required name field";
+      throw error;
+    }
+    const { contactId } = req.params;
+    const result = await updateContact(contactId, req.body);
+
+    if (!result) {
+      throw createError(404, "Contact is not found");
+    }
+    res.json({
+      status: "success",
+      code: 200,
+      data: {
+        result,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
