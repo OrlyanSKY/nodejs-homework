@@ -7,7 +7,7 @@ const {
   validation,
 } = require("../../middlewares");
 const { users: ctrl } = require("../../controllers");
-const { subscriptionSchema } = require("../../models/user");
+const { subscriptionSchema, verifyEmailSchema } = require("../../models/user");
 
 router.get("/current", auth, controllerWrap(ctrl.getCurrent));
 router.patch(
@@ -22,5 +22,10 @@ router.patch(
   upload.single("avatar"),
   controllerWrap(ctrl.updateAvatar)
 );
-
+router.get("/verify/:verificationToken", controllerWrap(ctrl.verifyEmail));
+router.post(
+  "/verify",
+  validation(verifyEmailSchema),
+  controllerWrap(ctrl.resendVerifyMail)
+);
 module.exports = router;
